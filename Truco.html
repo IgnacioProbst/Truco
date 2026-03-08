@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anotador de Truco</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Roboto:wght@500;900&display=swap');
+
+        :root {
+            --cuero-claro: #f4ebd8;
+            --cuero-borde: #8b5a2b;
+            --texto-oscuro: #2c1e16;
+            --fosforo-palo: #d2a679;
+            --fosforo-cabeza: #cc0000;
+            --rojo-boton: #b32400;
+            --verde-boton: #2d862d;
+            --azul-boton: #2962ff;
+        }
+
+        body {
+            /* Fondo simulando cuero de vaca (manchas abstractas suaves) */
+            background-color: #f0f0f0;
+            background-image: 
+                radial-gradient(circle at 20% 30%, #2a2a2a 0%, transparent 15%),
+                radial-gradient(circle at 80% 70%, #2a2a2a 0%, transparent 20%),
+                radial-gradient(circle at 40% 80%, #2a2a2a 0%, transparent 10%),
+                radial-gradient(circle at 70% 10%, #2a2a2a 0%, transparent 12%);
+            background-size: 300px 300px;
+            
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--texto-oscuro);
+            touch-action: manipulation;
+        }
+
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Caveat', cursive;
+            font-size: 38px;
+            margin: 0;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+        }
+
+        /* El Anotador central (Pergamino/Cuero curtido) */
+        .board {
+            display: flex;
+            width: 100%;
+            max-width: 450px;
+            background-color: var(--cuero-claro);
+            border: 3px solid var(--cuero-borde);
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 90, 43, 0.2);
+            position: relative;
+            padding: 10px 0 20px 0;
+        }
+
+        /* Costura simulada en el borde */
+        .board::before {
+            content: '';
+            position: absolute;
+            top: 5px; bottom: 5px; left: 5px; right: 5px;
+            border: 1px dashed rgba(139, 90, 43, 0.5);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        /* Línea divisoria central */
+        .board::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            bottom: 15px;
+            left: 50%;
+            width: 2px;
+            background-color: var(--cuero-borde);
+            opacity: 0.4;
+        }
+
+        .team {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+            padding: 0 5px;
+        }
+
+        h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 32px;
+            margin: 5px 0 0 0;
+            text-align: center;
+            width: 90%;
+            border-bottom: 2px solid var(--cuero-borde);
+            outline: none;
+            color: var(--texto-oscuro);
+        }
+
+        .score-number {
+            font-size: 16px;
+            font-weight: 900;
+            color: var(--cuero-borde);
+            margin-bottom: 15px;
+            margin-top: 5px;
+        }
+
+        .section-title {
+            font-family: 'Caveat', cursive;
+            font-size: 24px;
+            color: var(--cuero-borde);
+            margin: 5px 0;
+            opacity: 0.8;
+        }
+
+        .matches-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            min-height: 160px;
+            width: 100%;
+        }
+
+        /* =========================================
+           DIBUJO DE LOS FÓSFOROS (Estilo Realista)
+           ========================================= */
+        .cuadrado {
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+
+        .fosforo {
+            position: absolute;
+            background: linear-gradient(90deg, #c49463, var(--fosforo-palo), #c49463);
+            border-radius: 3px;
+            box-shadow: 2px 2px 3px rgba(0,0,0,0.3);
+        }
+
+        /* La cabeza del fósforo */
+        .fosforo::after {
+            content: '';
+            position: absolute;
+            background: radial-gradient(circle at 30% 30%, #ff6666, var(--fosforo-cabeza));
+            border-radius: 5px;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        }
+
+        /* Posiciones */
+        .f1 { left: 0; top: 0; width: 5px; height: 100%; }
+        .f1::after { left: -2px; top: -2px; width: 9px; height: 12px; }
+
+        .f2 { left: 0; bottom: 0; width: 100%; height: 5px; }
+        .f2::after { right: -2px; bottom: -2px; width: 12px; height: 9px; }
+
+        .f3 { right: 0; top: 0; width: 5px; height: 100%; }
+        .f3::after { right: -2px; bottom: -2px; width: 9px; height: 12px; }
+
+        .f4 { left: 0; top: 0; width: 100%; height: 5px; }
+        .f4::after { left: -2px; top: -2px; width: 12px; height: 9px; }
+
+        .f5 {
+            left: -2px;
+            top: 0;
+            width: 130%;
+            height: 5px;
+            transform: rotate(45deg);
+            transform-origin: 2px 2px;
+        }
+        .f5::after { right: -2px; top: -2px; width: 12px; height: 9px; }
+
+
+        /* =========================================
+           BOTONERA SIMPLIFICADA
+           ========================================= */
+        .controls-wrapper {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            gap: 15px;
+        }
+
+        .team-controls {
+            width: 48%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 8px;
+        }
+
+        button {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 900;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+            user-select: none;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.4);
+        }
+
+        /* +1 Ocupa todo el ancho arriba */
+        .btn-add-1 { 
+            grid-column: span 2; 
+            background-color: var(--verde-boton); 
+            padding: 12px 0; 
+            font-size: 22px; 
+        }
+        
+        /* -1 y +3 (Truco/Envido) abajo */
+        .btn-sub-1 { background-color: var(--rojo-boton); padding: 10px 0; font-size: 18px; }
+        .btn-add-3 { background-color: var(--azul-boton); padding: 10px 0; font-size: 18px; }
+
+
+        /* Modal de Ganador */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--cuero-claro);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            border: 4px solid var(--cuero-borde);
+            max-width: 80%;
+        }
+
+        .modal h2 {
+            font-size: 40px;
+            color: var(--rojo-boton);
+            border: none;
+            margin-bottom: 10px;
+        }
+
+        .btn-reset-main {
+            background-color: var(--cuero-borde);
+            color: var(--cuero-claro);
+            padding: 12px 25px;
+            font-size: 18px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-transform: uppercase;
+        }
+
+        .global-reset {
+            margin-top: 25px;
+            background: transparent;
+            color: #fff;
+            border: 2px solid #fff;
+            box-shadow: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+        .global-reset:active { transform: scale(0.95); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Anotador</h1>
+    </header>
+
+    <div class="board">
+        <!-- EQUIPO NOSOTROS -->
+        <div class="team">
+            <h2 contenteditable="true" spellcheck="false" id="name-nosotros">Nosotros</h2>
+            <div class="score-number" id="num-nosotros">0</div>
+            
+            <div class="section-title">Malas</div>
+            <div class="matches-container" id="malas-nosotros"></div>
+            
+            <div class="section-title" style="margin-top: 15px;">Buenas</div>
+            <div class="matches-container" id="buenas-nosotros"></div>
+        </div>
+        
+        <!-- EQUIPO ELLOS -->
+        <div class="team">
+            <h2 contenteditable="true" spellcheck="false" id="name-ellos">Ellos</h2>
+            <div class="score-number" id="num-ellos">0</div>
+            
+            <div class="section-title">Malas</div>
+            <div class="matches-container" id="malas-ellos"></div>
+            
+            <div class="section-title" style="margin-top: 15px;">Buenas</div>
+            <div class="matches-container" id="buenas-ellos"></div>
+        </div>
+    </div>
+
+    <!-- BOTONERA -->
+    <div class="controls-wrapper">
+        <div class="team-controls">
+            <button class="btn-add-1" onclick="cambiarPuntos('nosotros', 1)">+ 1</button>
+            <button class="btn-sub-1" onclick="cambiarPuntos('nosotros', -1)">- 1</button>
+            <button class="btn-add-3" onclick="cambiarPuntos('nosotros', 3)">+ 3</button>
+        </div>
+        <div class="team-controls">
+            <button class="btn-add-1" onclick="cambiarPuntos('ellos', 1)">+ 1</button>
+            <button class="btn-sub-1" onclick="cambiarPuntos('ellos', -1)">- 1</button>
+            <button class="btn-add-3" onclick="cambiarPuntos('ellos', 3)">+ 3</button>
+        </div>
+    </div>
+
+    <button class="global-reset" onclick="reiniciar(true)">Limpiar Mesa</button>
+
+    <!-- MODAL VICTORIA -->
+    <div id="modal-ganador" class="modal">
+        <div class="modal-content">
+            <h2 id="texto-ganador">¡Ganador!</h2>
+            <p style="font-size: 18px; color: #555; font-family: 'Roboto', sans-serif;">Se terminó el partido.</p>
+            <button class="btn-reset-main" onclick="reiniciar(false)">Jugar de nuevo</button>
+        </div>
+    </div>
+
+    <script>
+        let puntos = { nosotros: 0, ellos: 0 };
+        const MAX_PUNTOS = 30;
+
+        function generarFosforos(cantidad) {
+            if (cantidad === 0) return '';
+            let html = '<div class="cuadrado">';
+            if (cantidad >= 1) html += '<div class="fosforo f1"></div>'; 
+            if (cantidad >= 2) html += '<div class="fosforo f2"></div>'; 
+            if (cantidad >= 3) html += '<div class="fosforo f3"></div>'; 
+            if (cantidad >= 4) html += '<div class="fosforo f4"></div>'; 
+            if (cantidad >= 5) html += '<div class="fosforo f5"></div>'; 
+            html += '</div>';
+            return html;
+        }
+
+        function dibujarTablero() {
+            ['nosotros', 'ellos'].forEach(eq => {
+                let p = puntos[eq];
+                document.getElementById(`num-${eq}`).innerText = p;
+
+                let cMalas = document.getElementById(`malas-${eq}`);
+                let cBuenas = document.getElementById(`buenas-${eq}`);
+                
+                cMalas.innerHTML = '';
+                cBuenas.innerHTML = '';
+
+                for (let i = 0; i < 6; i++) {
+                    let puntosCaja = Math.max(0, Math.min(5, p - (i * 5)));
+                    let html = puntosCaja > 0 ? generarFosforos(puntosCaja) : '<div class="cuadrado"></div>';
+
+                    if (i < 3) cMalas.innerHTML += html;
+                    else cBuenas.innerHTML += html;
+                }
+            });
+        }
+
+        function cambiarPuntos(equipo, cant) {
+            if (puntos.nosotros >= MAX_PUNTOS || puntos.ellos >= MAX_PUNTOS) {
+                if (cant > 0) return; // Solo deja restar si alguien ya ganó
+            }
+
+            puntos[equipo] = Math.max(0, Math.min(MAX_PUNTOS, puntos[equipo] + cant));
+            dibujarTablero();
+            verificarGanador();
+        }
+
+        function verificarGanador() {
+            if (puntos.nosotros === MAX_PUNTOS || puntos.ellos === MAX_PUNTOS) {
+                let ganador = puntos.nosotros === MAX_PUNTOS ? 
+                    document.getElementById('name-nosotros').innerText : 
+                    document.getElementById('name-ellos').innerText;
+                
+                document.getElementById('texto-ganador').innerText = `¡Ganó ${ganador}!`;
+                document.getElementById('modal-ganador').style.display = 'flex';
+            } else {
+                document.getElementById('modal-ganador').style.display = 'none';
+            }
+        }
+
+        function reiniciar(confirmar) {
+            if (confirmar && puntos.nosotros === 0 && puntos.ellos === 0) return;
+            if (!confirmar || confirm("¿Borrar puntajes?")) {
+                puntos = { nosotros: 0, ellos: 0 };
+                document.getElementById('modal-ganador').style.display = 'none';
+                dibujarTablero();
+            }
+        }
+
+        // Evitar saltos de línea en los nombres
+        document.querySelectorAll('h2').forEach(el => {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+            });
+        });
+
+        dibujarTablero();
+    </script>
+</body>
+</html>
+
